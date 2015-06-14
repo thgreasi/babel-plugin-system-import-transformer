@@ -4,28 +4,24 @@ Babel plugin that replaces System.import with the equivalent UMD pattern
 ## Transforms
 
 ```js
-System.import('myImportedModule').then(function(module){
+System.import('./utils/serializer').then(function(module){
     console.log(module);
 });
 ```
 to
 ```js
-// this is placed near the top of the file, next to the rest babel helpers
-function _systemImportHelper(moduleName) {
-    return new Promise(function(resolve, reject) {
-        var global = window;
-        if (typeof global.define === 'function' && global.define.amd) {
-            global.require([moduleName], resolve, reject);
-        } else if (typeof module !== 'undefined' && (module.exports && typeof require !== 'undefined') ||
-            typeof module !== 'undefined' && (module.component && (global.require && global.require.loader === 'component'))) {
-            resolve(require(moduleName));
-        } else {
-            resolve(global.moduleName);
-        }
-    });
-}
-/*...*/
-_systemImportHelper('myImportedModule').then(function(module){
+new Promise(function (resolve, reject) {
+    var global = window;
+
+    if (typeof global.define === 'function' && global.define.amd) {
+        global.require(['utilsSerializer'], resolve, reject);
+    } else if (typeof module !== 'undefined' && (module.exports && typeof require !== 'undefined') ||
+               typeof module !== 'undefined' && (module.component && (global.require && global.require.loader === 'component'))) {
+        resolve(require('./utils/serializer'));
+    } else {
+        resolve(global['utilsSerializer']);
+    }
+}).then(function(module){
     console.log(module);
 });
 ```
@@ -40,6 +36,28 @@ Add "system-import-transformer" to your `plugins` argument or inside the `plugin
 babel: {
     options: {
         plugins: ["system-import-transformer"]
+    }
+}
+```
+
+## Configuration
+
+### Relative paths and Aliases
+
+The [babel's getModuleId option](http://babeljs.io/docs/usage/options/#formatting-options) (if defined) is used for the AMD and Global Module import.
+
+```js
+babel: {
+    options: {
+        moduleIds: true,
+        getModuleId: function(moduleName) {
+            var files = {
+                'src/utils/serializer': 'utilsSerializer'
+            };
+
+            return files[moduleName] || moduleName.replace('src/', '');
+        },
+        plugins: ['system-import-transformer']
     }
 }
 ```
