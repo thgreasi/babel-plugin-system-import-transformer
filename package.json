@@ -1,6 +1,6 @@
 {
   "name": "babel-plugin-system-import-transformer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Babel plugin that replaces System.import with the equivalent UMD pattern",
   "main": "index.js",
   "author": "Thodoris Greasidis",
@@ -10,13 +10,18 @@
     "url": "https://github.com/thgreasi/babel-plugin-system-import-transformer.git"
   },
   "peerDependencies": {
-    "babel-core": ">=5.2.0"
+    "babel-core": "^5.2.0"
   },
   "keywords": [
     "babel",
     "babel-plugin",
     "system",
     "import",
-    "transformer"
-  ]
+    "transformer",
+    "UMD"
+  ],
+  "bugs": {
+    "url": "https://github.com/thgreasi/babel-plugin-system-import-transformer/issues"
+  },
+  "homepage": "https://github.com/thgreasi/babel-plugin-system-import-transformer"
 }
