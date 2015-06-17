@@ -23,8 +23,9 @@ module.exports = function (babel) {
     return result;
   }
 
-  function createTransformedExpression(importedModuleNode, moduleNameNode) {
+  function createTransformedExpression(importedModuleNode, moduleNameNode, fileOpts) {
     var globalIdentifier = t.identifier('global');
+    var globalVarDeclaration = t.variableDeclaration('var', [t.variableDeclarator(globalIdentifier, t.identifier('window'))]);
     if (!moduleNameNode) {
       moduleNameNode = importedModuleNode;
     }
@@ -136,7 +137,7 @@ module.exports = function (babel) {
 
     var commonJSOrComponentTest = t.logicalExpression('||', commonJSTest, componentTest);
 
-    var umdTests = t.ifStatement(amdTest,
+    var umdRequire = t.ifStatement(amdTest,
       t.blockStatement([amdRequire]),
       t.ifStatement(commonJSOrComponentTest,
         t.blockStatement([commonJSRequire]),
@@ -144,13 +145,17 @@ module.exports = function (babel) {
       )
     );
 
+    var moduleImportExpressions = [globalVarDeclaration, umdRequire];
+    if (fileOpts.modules === 'amd') {
+      moduleImportExpressions = [globalVarDeclaration, amdRequire];
+    } else if (fileOpts.modules === 'common') {
+      moduleImportExpressions = [commonJSRequire];
+    }
+
     var newPromiseExpression = t.newExpression(t.identifier('Promise'), [
       t.functionExpression(null,
         [t.identifier('resolve'), t.identifier('reject')],
-        t.blockStatement([
-          t.variableDeclaration('var', [t.variableDeclarator(globalIdentifier, t.identifier('window'))]),
-          umdTests
-        ])
+        t.blockStatement(moduleImportExpressions)
       )
     ]);
     return newPromiseExpression;
@@ -167,7 +172,10 @@ module.exports = function (babel) {
           var moduleName = getImportModuleName(file, importedModuleLiteral.value);
           var moduleNameLiteral = t.literal(moduleName);
 
-          return t.expressionStatement(createTransformedExpression(importedModuleLiteral, moduleNameLiteral));
+          var transformedExpression = createTransformedExpression(importedModuleLiteral, moduleNameLiteral, file.opts);
+          if (transformedExpression) {
+            return t.expressionStatement(transformedExpression);
+          }
         }
       }
     }
