@@ -23,13 +23,7 @@ module.exports = function (babel) {
     return result;
   }
 
-  function createTransformedExpression(importedModuleNode, moduleNameNode, fileOpts) {
-    var globalIdentifier = t.identifier('global');
-    var globalVarDeclaration = t.variableDeclaration('var', [t.variableDeclarator(globalIdentifier, t.identifier('window'))]);
-    if (!moduleNameNode) {
-      moduleNameNode = importedModuleNode;
-    }
-
+  function getAmdTest(globalIdentifier) {
     // typeof global.define === 'function' && global.define.amd
     var amdTest = t.logicalExpression('&&',
       t.binaryExpression('===',
@@ -47,7 +41,10 @@ module.exports = function (babel) {
         t.identifier('amd')
       )
     );
+    return amdTest;
+  }
 
+  function getAmdRequire(globalIdentifier, module) {
     // global.require(['localforageSerializer'], resolve, reject);
     var amdRequire = t.expressionStatement(
       t.callExpression(
@@ -56,13 +53,16 @@ module.exports = function (babel) {
           t.identifier('require')
         ),
         [
-          t.arrayExpression([moduleNameNode]),
+          t.arrayExpression([module]),
           t.identifier('resolve'),
           t.identifier('reject')
         ]
       )
     );
+    return amdRequire;
+  }
 
+  function getCommonJSTest() {
     // typeof module !== 'undefined' && module.exports && typeof require !== 'undefined'
     var commonJSTest = t.logicalExpression('&&',
       t.binaryExpression('!==',
@@ -80,7 +80,10 @@ module.exports = function (babel) {
         )
       )
     );
+    return commonJSTest;
+  }
 
+  function getComponentTest(globalIdentifier) {
     // typeof module !== 'undefined' && module.component && global.require && global.require.loader === 'component'
     var componentTest = t.logicalExpression('&&',
       t.binaryExpression('!==',
@@ -110,23 +113,29 @@ module.exports = function (babel) {
         )
       )
     );
+    return componentTest;
+  }
 
+  function getCommonJSRequire(module) {
     // resolve(require('./../utils/serializer'));
     var commonJSRequire = t.expressionStatement(
       t.callExpression(
         t.identifier('resolve'), [
           t.callExpression(
             t.identifier('require'),
-            [importedModuleNode]
+            [module]
           )
         ]
       )
     );
+    return commonJSRequire;
+  }
 
+  function getGlobalRequire(globalIdentifier, module) {
     // resolve(global.localforageSerializer);
     var globalMemberExpression = t.memberExpression(
       globalIdentifier,
-      moduleNameNode
+      module
     );
     globalMemberExpression.computed = true;
     var globalRequire = t.expressionStatement(
@@ -134,22 +143,44 @@ module.exports = function (babel) {
         t.identifier('resolve'), [globalMemberExpression]
       )
     );
+    return globalRequire;
+  }
+
+  function createTransformedExpression(importedModuleNode, moduleNameNode, file) {
+    var globalIdentifier = t.identifier('global');
+    var globalVarDeclaration = t.variableDeclaration('var', [t.variableDeclarator(globalIdentifier, t.identifier('window'))]);
+    if (!moduleNameNode) {
+      moduleNameNode = importedModuleNode;
+    }
+
+    var amdTest = getAmdTest(globalIdentifier);
+
+    var amdRequire = getAmdRequire(globalIdentifier, moduleNameNode);
+
+    var commonJSTest = getCommonJSTest();
+
+    var componentTest = getComponentTest(globalIdentifier);
+
+    var commonJSRequire = getCommonJSRequire(importedModuleNode);
+
+    var globalRequire = getGlobalRequire(globalIdentifier, moduleNameNode);
 
     var commonJSOrComponentTest = t.logicalExpression('||', commonJSTest, componentTest);
 
-    var umdRequire = t.ifStatement(amdTest,
-      t.blockStatement([amdRequire]),
-      t.ifStatement(commonJSOrComponentTest,
-        t.blockStatement([commonJSRequire]),
-        t.blockStatement([globalRequire])
-      )
-    );
-
-    var moduleImportExpressions = [globalVarDeclaration, umdRequire];
-    if (fileOpts.modules === 'amd') {
+    var moduleImportExpressions;
+    if (file.opts.modules === 'amd') {
       moduleImportExpressions = [globalVarDeclaration, amdRequire];
-    } else if (fileOpts.modules === 'common') {
+    } else if (file.opts.modules === 'common') {
       moduleImportExpressions = [commonJSRequire];
+    } else {
+      var umdRequire = t.ifStatement(amdTest,
+        t.blockStatement([amdRequire]),
+        t.ifStatement(commonJSOrComponentTest,
+          t.blockStatement([commonJSRequire]),
+          t.blockStatement([globalRequire])
+        )
+      );
+      moduleImportExpressions = [globalVarDeclaration, umdRequire];
     }
 
     var newPromiseExpression = t.newExpression(t.identifier('Promise'), [
@@ -172,7 +203,7 @@ module.exports = function (babel) {
           var moduleName = getImportModuleName(file, importedModuleLiteral.value);
           var moduleNameLiteral = t.literal(moduleName);
 
-          var transformedExpression = createTransformedExpression(importedModuleLiteral, moduleNameLiteral, file.opts);
+          var transformedExpression = createTransformedExpression(importedModuleLiteral, moduleNameLiteral, file);
           if (transformedExpression) {
             return t.expressionStatement(transformedExpression);
           }
