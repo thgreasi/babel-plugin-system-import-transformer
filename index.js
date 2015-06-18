@@ -5,6 +5,59 @@ module.exports = function (babel) {
 
   var UmdFormatter = require('./../babel-core/lib/babel/transformation/modules/umd');
 
+  var ModuleType = {
+      AMD: 1,
+      COMMON: 2,
+      GLOBAL: 3
+  };
+
+  function getModuleTypeHelper(file) {
+    var name = 'system-import-transformer-module-type-helper';
+
+    var declar = file.declarations[name];
+    if (declar) {
+      return declar;
+    }
+
+    var uid = file.declarations[name] = file.scope.generateUidIdentifier(name);
+
+    file.usedHelpers[name] = true;
+
+    var globalIdentifier = t.identifier("global");
+    var ref = t.callExpression(t.functionExpression(null, [globalIdentifier],
+      t.blockStatement([
+        t.returnStatement(
+          t.conditionalExpression(getAmdTest(globalIdentifier),
+            t.literal(ModuleType.AMD),
+            t.conditionalExpression(t.logicalExpression('||', getCommonJSTest(), getComponentTest(globalIdentifier)),
+              t.literal(ModuleType.COMMON),
+              t.literal(ModuleType.GLOBAL)
+            )
+          )
+        )
+      ])),
+      [t.identifier('window')]
+    );
+
+    if (t.isFunctionExpression(ref) && !ref.id) {
+        ref.body._compact = true;
+        ref._generated = true;
+        ref.id = uid;
+        ref.type = "FunctionDeclaration";
+        file.attachAuxiliaryComment(ref);
+        file.path.unshiftContainer("body", ref);
+    } else {
+        ref._compact = true;
+        file.scope.push({
+            id: uid,
+            init: ref,
+            unique: true
+        });
+    }
+
+    return uid;
+  }
+
   function getImportPath(file, relativeImportPath) {
     var filename = file.opts.filename;
     var filePath = filename.replace(/[^\/]+$/, '');
@@ -153,19 +206,11 @@ module.exports = function (babel) {
       moduleNameNode = importedModuleNode;
     }
 
-    var amdTest = getAmdTest(globalIdentifier);
-
     var amdRequire = getAmdRequire(globalIdentifier, moduleNameNode);
-
-    var commonJSTest = getCommonJSTest();
-
-    var componentTest = getComponentTest(globalIdentifier);
 
     var commonJSRequire = getCommonJSRequire(importedModuleNode);
 
     var globalRequire = getGlobalRequire(globalIdentifier, moduleNameNode);
-
-    var commonJSOrComponentTest = t.logicalExpression('||', commonJSTest, componentTest);
 
     var moduleImportExpressions;
     if (file.opts.modules === 'amd') {
@@ -173,9 +218,11 @@ module.exports = function (babel) {
     } else if (file.opts.modules === 'common') {
       moduleImportExpressions = [commonJSRequire];
     } else {
-      var umdRequire = t.ifStatement(amdTest,
+      var moduleTypeVariable = getModuleTypeHelper(file);
+
+      var umdRequire = t.ifStatement(t.binaryExpression('===', moduleTypeVariable, t.literal(ModuleType.AMD)),
         t.blockStatement([amdRequire]),
-        t.ifStatement(commonJSOrComponentTest,
+        t.ifStatement(t.binaryExpression('===', moduleTypeVariable, t.literal(ModuleType.COMMON)),
           t.blockStatement([commonJSRequire]),
           t.blockStatement([globalRequire])
         )
