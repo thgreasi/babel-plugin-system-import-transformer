@@ -61,3 +61,13 @@ babel: {
     }
 }
 ```
+
+### AMD & CommonJS
+
+When babel is configured to use `AMD` or `CommonJS` modules
+```js
+babel: { options: { modules: 'umd' } }
+// OR
+babel: { options: { modules: 'common' /* this is the default value for babel */ } }
+```
+`system-import-transformer` will omit the module type detection code and just insert the appropriate require statement wrapped with a `Promise`.
