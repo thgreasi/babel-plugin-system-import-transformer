@@ -23,7 +23,33 @@ module.exports = function (babel) {
     return result;
   }
 
-  function getAmdTest(globalIdentifier) {
+  function SystemImportExpressionTransformer(file, params) {
+    this.file = file;
+    var param = params[0];
+    this.importedModuleLiteral = t.literal(param.node.value);
+
+    var moduleName = getImportModuleName(this.file, this.importedModuleLiteral.value);
+    this.moduleNameLiteral = t.literal(moduleName);
+  }
+
+  SystemImportExpressionTransformer.prototype.getGlobalIdentifier = function () {
+    if (this.globalIdentifier) {
+      return this.globalIdentifier;
+    }
+    this.globalIdentifier = t.identifier('global');
+    return this.globalIdentifier;
+  };
+
+  SystemImportExpressionTransformer.prototype.getGlobalVarDeclaration = function () {
+    if (this.globalVarDeclaration) {
+      return this.globalVarDeclaration;
+    }
+    this.globalVarDeclaration = t.variableDeclaration('var', [t.variableDeclarator(this.getGlobalIdentifier(), t.identifier('window'))]);
+    return this.globalVarDeclaration;
+  };
+
+  SystemImportExpressionTransformer.prototype.getAmdTest = function () {
+    var globalIdentifier = this.getGlobalIdentifier();
     // typeof global.define === 'function' && global.define.amd
     var amdTest = t.logicalExpression('&&',
       t.binaryExpression('===',
@@ -42,9 +68,10 @@ module.exports = function (babel) {
       )
     );
     return amdTest;
-  }
+  };
 
-  function getAmdRequire(globalIdentifier, module) {
+  SystemImportExpressionTransformer.prototype.getAmdRequire = function (module) {
+    var globalIdentifier = this.getGlobalIdentifier();
     // global.require(['localforageSerializer'], resolve, reject);
     var amdRequire = t.expressionStatement(
       t.callExpression(
@@ -60,9 +87,9 @@ module.exports = function (babel) {
       )
     );
     return amdRequire;
-  }
+  };
 
-  function getCommonJSTest() {
+  SystemImportExpressionTransformer.prototype.getCommonJSTest = function () {
     // typeof module !== 'undefined' && module.exports && typeof require !== 'undefined'
     var commonJSTest = t.logicalExpression('&&',
       t.binaryExpression('!==',
@@ -81,9 +108,10 @@ module.exports = function (babel) {
       )
     );
     return commonJSTest;
-  }
+  };
 
-  function getComponentTest(globalIdentifier) {
+  SystemImportExpressionTransformer.prototype.getComponentTest = function () {
+    var globalIdentifier = this.getGlobalIdentifier();
     // typeof module !== 'undefined' && module.component && global.require && global.require.loader === 'component'
     var componentTest = t.logicalExpression('&&',
       t.binaryExpression('!==',
@@ -114,9 +142,9 @@ module.exports = function (babel) {
       )
     );
     return componentTest;
-  }
+  };
 
-  function getCommonJSRequire(module) {
+  SystemImportExpressionTransformer.prototype.getCommonJSRequire = function (module) {
     // resolve(require('./../utils/serializer'));
     var commonJSRequire = t.expressionStatement(
       t.callExpression(
@@ -129,9 +157,10 @@ module.exports = function (babel) {
       )
     );
     return commonJSRequire;
-  }
+  };
 
-  function getGlobalRequire(globalIdentifier, module) {
+  SystemImportExpressionTransformer.prototype.getGlobalRequire = function (module) {
+    var globalIdentifier = this.getGlobalIdentifier();
     // resolve(global.localforageSerializer);
     var globalMemberExpression = t.memberExpression(
       globalIdentifier,
@@ -144,33 +173,29 @@ module.exports = function (babel) {
       )
     );
     return globalRequire;
-  }
+  };
 
-  function createTransformedExpression(importedModuleNode, moduleNameNode, file) {
-    var globalIdentifier = t.identifier('global');
-    var globalVarDeclaration = t.variableDeclaration('var', [t.variableDeclarator(globalIdentifier, t.identifier('window'))]);
-    if (!moduleNameNode) {
-      moduleNameNode = importedModuleNode;
-    }
+  SystemImportExpressionTransformer.prototype.createTransformedExpression = function () {
+    var globalVarDeclaration = this.getGlobalVarDeclaration();
 
-    var amdTest = getAmdTest(globalIdentifier);
+    var amdTest = this.getAmdTest();
 
-    var amdRequire = getAmdRequire(globalIdentifier, moduleNameNode);
+    var amdRequire = this.getAmdRequire(this.moduleNameLiteral);
 
-    var commonJSTest = getCommonJSTest();
+    var commonJSTest = this.getCommonJSTest();
 
-    var componentTest = getComponentTest(globalIdentifier);
+    var componentTest = this.getComponentTest();
 
-    var commonJSRequire = getCommonJSRequire(importedModuleNode);
+    var commonJSRequire = this.getCommonJSRequire(this.importedModuleLiteral);
 
-    var globalRequire = getGlobalRequire(globalIdentifier, moduleNameNode);
+    var globalRequire = this.getGlobalRequire(this.moduleNameLiteral);
 
     var commonJSOrComponentTest = t.logicalExpression('||', commonJSTest, componentTest);
 
     var moduleImportExpressions;
-    if (file.opts.modules === 'amd') {
+    if (this.file.opts.modules === 'amd') {
       moduleImportExpressions = [globalVarDeclaration, amdRequire];
-    } else if (file.opts.modules === 'common') {
+    } else if (this.file.opts.modules === 'common') {
       moduleImportExpressions = [commonJSRequire];
     } else {
       var umdRequire = t.ifStatement(amdTest,
@@ -190,20 +215,15 @@ module.exports = function (babel) {
       )
     ]);
     return newPromiseExpression;
-  }
+  };
 
   return new babel.Transformer('system-import-transformer', {
     CallExpression: function (node, parent, scope, file) {
       if (this.get('callee').matchesPattern('System.import')) {
         var params = this.get('arguments');
         if (params.length && params[0].isLiteral()) {
-          var param = params[0];
-          var importedModuleLiteral = t.literal(param.node.value);
-
-          var moduleName = getImportModuleName(file, importedModuleLiteral.value);
-          var moduleNameLiteral = t.literal(moduleName);
-
-          var transformedExpression = createTransformedExpression(importedModuleLiteral, moduleNameLiteral, file);
+          var transformer = new SystemImportExpressionTransformer(file, params);
+          var transformedExpression = transformer.createTransformedExpression();
           if (transformedExpression) {
             return t.expressionStatement(transformedExpression);
           }
