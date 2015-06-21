@@ -66,7 +66,7 @@ babel: {
 
 When babel is configured to use `AMD` or `CommonJS` modules
 ```js
-babel: { options: { modules: 'umd' } }
+babel: { options: { modules: 'amd' } }
 // OR
 babel: { options: { modules: 'common' /* this is the default value for babel */ } }
 ```
