@@ -71,3 +71,15 @@ babel: { options: { modules: 'amd' } }
 babel: { options: { modules: 'common' /* this is the default value for babel */ } }
 ```
 `system-import-transformer` will omit the module type detection code and just insert the appropriate require statement wrapped with a `Promise`.
+```js
+// AMD
+new Promise(function (resolve, reject) {
+    var global = window;
+    global.require(['utilsSerializer'], resolve, reject);
+}).then(function(module){ console.log(module); });
+
+// CommonJS
+new Promise(function (resolve, reject) {
+    resolve(require('./utils/serializer'));
+}).then(function(module){ console.log(module); });
+```
