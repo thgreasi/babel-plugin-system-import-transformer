@@ -3,8 +3,6 @@ module.exports = function (babel) {
 
   var path = require('path');
 
-  var UmdFormatter = require('./../babel-core/lib/babel/transformation/modules/umd');
-
   function getImportPath(file, relativeImportPath) {
     var filename = file.opts.filename;
     var filePath = filename.replace(/[^\/]+$/, '');
@@ -19,6 +17,7 @@ module.exports = function (babel) {
     var importedModuleFile = t.cloneDeep(file);
     importedModuleFile.opts = t.cloneDeep(file.opts);
     importedModuleFile.opts.filename = importedModuleFile.opts.filenameRelative = importedModulePath + '.js';
+    var UmdFormatter = file.moduleFormatter.constructor;
     var result = new UmdFormatter(importedModuleFile).getModuleName();
     return result;
   }
