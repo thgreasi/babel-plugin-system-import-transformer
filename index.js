@@ -35,16 +35,46 @@ module.exports = function (babel) {
     if (this.globalIdentifier) {
       return this.globalIdentifier;
     }
-    this.globalIdentifier = t.identifier('global');
+
+    var name = 'system-import-transformer-global-identifier';
+    var ref = t.conditionalExpression(
+      t.binaryExpression('!==',
+        t.unaryExpression('typeof', t.identifier('window')),
+        t.literal('undefined')
+      ),
+      t.identifier('window'),
+      t.identifier('self')
+    );
+    this.globalIdentifier = this.getOrCreateHelper(name, ref);
     return this.globalIdentifier;
   };
 
-  SystemImportExpressionTransformer.prototype.getGlobalVarDeclaration = function () {
-    if (this.globalVarDeclaration) {
-      return this.globalVarDeclaration;
+  SystemImportExpressionTransformer.prototype.getOrCreateHelper = function (name, ref) {
+    var declar = this.file.declarations[name];
+    if (declar) {
+      return declar;
     }
-    this.globalVarDeclaration = t.variableDeclaration('var', [t.variableDeclarator(this.getGlobalIdentifier(), t.identifier('window'))]);
-    return this.globalVarDeclaration;
+
+    var uid = this.file.declarations[name] = this.file.scope.generateUidIdentifier(name);
+    this.file.usedHelpers[name] = true;
+
+    if (t.isFunctionExpression(ref) && !ref.id) {
+        ref.body._compact = true;
+        ref._generated = true;
+        ref.id = uid;
+        ref.type = "FunctionDeclaration";
+        this.file.attachAuxiliaryComment(ref);
+        this.file.path.unshiftContainer("body", ref);
+    } else {
+        ref._compact = true;
+        this.file.scope.push({
+            id: uid,
+            init: ref,
+            unique: true
+        });
+    }
+
+    return uid;
   };
 
   SystemImportExpressionTransformer.prototype.getAmdTest = function () {
@@ -175,8 +205,6 @@ module.exports = function (babel) {
   };
 
   SystemImportExpressionTransformer.prototype.createTransformedExpression = function () {
-    var globalVarDeclaration = this.getGlobalVarDeclaration();
-
     var amdTest = this.getAmdTest();
 
     var amdRequire = this.getAmdRequire(this.moduleNameLiteral);
@@ -193,7 +221,7 @@ module.exports = function (babel) {
 
     var moduleImportExpressions;
     if (this.file.opts.modules === 'amd') {
-      moduleImportExpressions = [globalVarDeclaration, amdRequire];
+      moduleImportExpressions = [amdRequire];
     } else if (this.file.opts.modules === 'common') {
       moduleImportExpressions = [commonJSRequire];
     } else {
@@ -204,7 +232,7 @@ module.exports = function (babel) {
           t.blockStatement([globalRequire])
         )
       );
-      moduleImportExpressions = [globalVarDeclaration, umdRequire];
+      moduleImportExpressions = [umdRequire];
     }
 
     var newPromiseExpression = t.newExpression(t.identifier('Promise'), [
