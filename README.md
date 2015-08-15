@@ -1,5 +1,8 @@
 # babel-plugin-system-import-transformer
-Babel plugin that replaces System.import with the equivalent UMD pattern
+[![npm](https://img.shields.io/npm/v/babel-plugin-system-import-transformer.svg)](https://www.npmjs.com/package/babel-plugin-system-import-transformer)
+[![npm](https://img.shields.io/npm/dm/babel-plugin-system-import-transformer.svg)](https://www.npmjs.com/package/babel-plugin-system-import-transformer)
+
+[Babel](https://babeljs.io/) plugin that replaces System.import with the equivalent UMD pattern
 
 ## Transforms
 
