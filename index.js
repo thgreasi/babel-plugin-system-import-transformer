@@ -205,31 +205,22 @@ module.exports = function (babel) {
   };
 
   SystemImportExpressionTransformer.prototype.createTransformedExpression = function () {
-    var amdTest = this.getAmdTest();
-
-    var amdRequire = this.getAmdRequire(this.moduleNameLiteral);
-
-    var commonJSTest = this.getCommonJSTest();
-
-    var componentTest = this.getComponentTest();
-
-    var commonJSRequire = this.getCommonJSRequire(this.importedModuleLiteral);
-
-    var globalRequire = this.getGlobalRequire(this.moduleNameLiteral);
-
-    var commonJSOrComponentTest = t.logicalExpression('||', commonJSTest, componentTest);
-
     var moduleImportExpressions;
     if (this.file.opts.modules === 'amd') {
-      moduleImportExpressions = [amdRequire];
+      moduleImportExpressions = [this.getAmdRequire(this.moduleNameLiteral)];
     } else if (this.file.opts.modules === 'common') {
-      moduleImportExpressions = [commonJSRequire];
+      moduleImportExpressions = [this.getCommonJSRequire(this.importedModuleLiteral)];
     } else {
+      var amdTest = this.getAmdTest();
+      var commonJSTest = this.getCommonJSTest();
+      var componentTest = this.getComponentTest();
+      var commonJSOrComponentTest = t.logicalExpression('||', commonJSTest, componentTest);
+
       var umdRequire = t.ifStatement(amdTest,
-        t.blockStatement([amdRequire]),
+        t.blockStatement([this.getAmdRequire(this.moduleNameLiteral)]),
         t.ifStatement(commonJSOrComponentTest,
-          t.blockStatement([commonJSRequire]),
-          t.blockStatement([globalRequire])
+          t.blockStatement([this.getCommonJSRequire(this.importedModuleLiteral)]),
+          t.blockStatement([this.getGlobalRequire(this.moduleNameLiteral)])
         )
       );
       moduleImportExpressions = [umdRequire];
