@@ -1,6 +1,6 @@
 {
   "name": "babel-plugin-system-import-transformer",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "Babel plugin that replaces System.import with the equivalent UMD pattern",
   "main": "index.js",
   "author": "Thodoris Greasidis",
