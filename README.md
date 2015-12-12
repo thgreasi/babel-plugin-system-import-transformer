@@ -29,6 +29,12 @@ new Promise(function (resolve, reject) {
 });
 ```
 
+## Requirements
+
+- Babel v6.x.x
+
+**Note:** for babel v5 please use the [v1.x.x releases](https://github.com/thgreasi/babel-plugin-system-import-transformer/tree/v1.x.x-stable).
+
 ## Installation
 
 `npm install babel-plugin-system-import-transformer`
@@ -36,6 +42,14 @@ new Promise(function (resolve, reject) {
 Add "system-import-transformer" to your `plugins` argument or inside the `plugins` options of your `Gruntfile`.
 
 ```js
+// in .babelrc
+{
+    "plugins": [
+        "system-import-transformer"
+    ]
+}
+
+// in grunt.js
 babel: {
     options: {
         plugins: ["system-import-transformer"]
@@ -67,11 +81,21 @@ babel: {
 
 ### AMD & CommonJS
 
-When babel is configured to use `AMD` or `CommonJS` modules
+When you are transforming to `AMD` or `CommonJS` modules you should set the respective plugin option:
 ```js
-babel: { options: { modules: 'amd' } }
-// OR
-babel: { options: { modules: 'common' /* this is the default value for babel */ } }
+// AMD
+{
+    "plugins": [
+        ["system-import-transformer", { "modules": "amd" }]
+    ]
+}
+
+// CommonJS
+{
+    "plugins": [
+        ["system-import-transformer", { "modules": "common" }]
+    ]
+}
 ```
 `system-import-transformer` will omit the module type detection code and just insert the appropriate require statement wrapped with a `Promise`.
 ```js
@@ -86,3 +110,5 @@ new Promise(function (resolve, reject) {
     resolve(require('./utils/serializer'));
 }).then(function(module){ console.log(module); });
 ```
+
+**Note**: the default transpilation target is UMD
