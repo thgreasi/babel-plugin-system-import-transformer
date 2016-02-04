@@ -1,7 +1,7 @@
+var path = require('path');
+
 module.exports = function (babel) {
   var t = babel.types;
-
-  var path = require('path');
 
   function getImportPath(file, relativeImportPath) {
     var filename = file.opts.filename;
@@ -14,21 +14,25 @@ module.exports = function (babel) {
     var importedModulePath = getImportPath(file, importPath);
 
     // There should be a better way
-    var importedModuleFile = t.cloneDeep(file);
+    var importedModuleFile = t.clone(file);
     importedModuleFile.opts = t.cloneDeep(file.opts);
     importedModuleFile.opts.filename = importedModuleFile.opts.filenameRelative = importedModulePath + '.js';
-    var UmdFormatter = file.moduleFormatter.constructor;
-    var result = new UmdFormatter(importedModuleFile).getModuleName();
+    
+    importedModuleFile.opts.moduleIds = true;
+    var result = importedModuleFile.getModuleName();
     return result;
   }
 
-  function SystemImportExpressionTransformer(file, params) {
-    this.file = file;
+  function SystemImportExpressionTransformer(state, params) {
+    this.state = state;
+    this.file = state.file;
+    this.pluginOptions = this.state.opts;
+    this.moduleType = this.pluginOptions.modules;
     var param = params[0];
-    this.importedModuleLiteral = t.literal(param.node.value);
+    this.importedModuleLiteral = t.stringLiteral(param.node.value);
 
     var moduleName = getImportModuleName(this.file, this.importedModuleLiteral.value);
-    this.moduleNameLiteral = t.literal(moduleName);
+    this.moduleNameLiteral = t.stringLiteral(moduleName);
   }
 
   SystemImportExpressionTransformer.prototype.getGlobalIdentifier = function () {
@@ -40,7 +44,7 @@ module.exports = function (babel) {
     var ref = t.conditionalExpression(
       t.binaryExpression('!==',
         t.unaryExpression('typeof', t.identifier('window')),
-        t.literal('undefined')
+        t.stringLiteral('undefined')
       ),
       t.identifier('window'),
       t.identifier('self')
@@ -86,7 +90,7 @@ module.exports = function (babel) {
           globalIdentifier,
           t.identifier('define')
         )),
-        t.literal('function')
+        t.stringLiteral('function')
       ),
       t.memberExpression(
         t.memberExpression(
@@ -123,7 +127,7 @@ module.exports = function (babel) {
     var commonJSTest = t.logicalExpression('&&',
       t.binaryExpression('!==',
         t.unaryExpression('typeof', t.identifier('module')),
-        t.literal('undefined')
+        t.stringLiteral('undefined')
       ),
       t.logicalExpression('&&',
         t.memberExpression(
@@ -132,7 +136,7 @@ module.exports = function (babel) {
         ),
         t.binaryExpression('!==',
           t.unaryExpression('typeof', t.identifier('require')),
-          t.literal('undefined')
+          t.stringLiteral('undefined')
         )
       )
     );
@@ -145,7 +149,7 @@ module.exports = function (babel) {
     var componentTest = t.logicalExpression('&&',
       t.binaryExpression('!==',
         t.unaryExpression('typeof', t.identifier('module')),
-        t.literal('undefined')
+        t.stringLiteral('undefined')
       ),
       t.logicalExpression('&&',
         t.memberExpression(
@@ -165,7 +169,7 @@ module.exports = function (babel) {
               ),
               t.identifier('loader')
             ),
-            t.literal('component')
+            t.stringLiteral('component')
           )
         )
       )
@@ -175,40 +179,35 @@ module.exports = function (babel) {
 
   SystemImportExpressionTransformer.prototype.getCommonJSRequire = function (module) {
     // resolve(require('./../utils/serializer'));
-    var commonJSRequire = t.expressionStatement(
-      t.callExpression(
-        t.identifier('resolve'), [
-          t.callExpression(
-            t.identifier('require'),
-            [module]
-          )
-        ]
-      )
+    
+    var commonJSRequireExpression = t.callExpression(
+      t.identifier('require'),
+      // [module] // why this isn't working???
+      // [module, t.identifier('undefined')] // had to add extra undefined parameter or parenthesis !?!?!?
+      [t.parenthesizedExpression(module)]
     );
+    var commonJSRequire = this.createResolveExpressionStatement(commonJSRequireExpression);
     return commonJSRequire;
   };
 
   SystemImportExpressionTransformer.prototype.getGlobalRequire = function (module) {
     var globalIdentifier = this.getGlobalIdentifier();
+
     // resolve(global.localforageSerializer);
     var globalMemberExpression = t.memberExpression(
       globalIdentifier,
-      module
+      module,
+      true // computed
     );
-    globalMemberExpression.computed = true;
-    var globalRequire = t.expressionStatement(
-      t.callExpression(
-        t.identifier('resolve'), [globalMemberExpression]
-      )
-    );
+    var globalRequire = this.createResolveExpressionStatement(globalMemberExpression);
     return globalRequire;
   };
 
   SystemImportExpressionTransformer.prototype.createTransformedExpression = function () {
     var moduleImportExpressions;
-    if (this.file.opts.modules === 'amd') {
+    if (this.moduleType === 'amd') {
       moduleImportExpressions = [this.getAmdRequire(this.moduleNameLiteral)];
-    } else if (this.file.opts.modules === 'common') {
+    } else if (this.moduleType === 'common') {
       moduleImportExpressions = [this.getCommonJSRequire(this.importedModuleLiteral)];
     } else {
       var amdTest = this.getAmdTest();
@@ -235,18 +234,30 @@ module.exports = function (babel) {
     return newPromiseExpression;
   };
 
-  return new babel.Transformer('system-import-transformer', {
-    CallExpression: function (node, parent, scope, file) {
-      if (this.get('callee').matchesPattern('System.import')) {
-        var params = this.get('arguments');
-        if (params.length && params[0].isLiteral()) {
-          var transformer = new SystemImportExpressionTransformer(file, params);
-          var transformedExpression = transformer.createTransformedExpression();
-          if (transformedExpression) {
-            return t.expressionStatement(transformedExpression);
+  SystemImportExpressionTransformer.prototype.createResolveExpressionStatement = function (parameter) {
+    var result = t.expressionStatement(
+      t.callExpression(
+        t.identifier('resolve'), [parameter]
+      )
+    );
+    return result;
+  };
+
+  return {
+    visitor: {
+      CallExpression: function (path, state) {
+        var callee = path.get('callee');
+        if (callee && callee.matchesPattern('System.import')) {
+          var params = path.get('arguments');
+          if (params.length && params[0].isLiteral()) {
+            var transformer = new SystemImportExpressionTransformer(state, params);
+            var transformedExpression = transformer.createTransformedExpression();
+            if (transformedExpression) {
+              path.replaceWith(transformedExpression);
+            }
           }
         }
       }
     }
-  });
+  };
 };
