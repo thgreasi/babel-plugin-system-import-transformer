@@ -103,7 +103,7 @@ module.exports = function (babel) {
     return amdTest;
   };
 
-  SystemImportExpressionTransformer.prototype.getAmdRequire = function (module) {
+  SystemImportExpressionTransformer.prototype.getAmdRequirePromise = function (module) {
     var globalIdentifier = this.getGlobalIdentifier();
     // global.require(['localforageSerializer'], resolve, reject);
     var amdRequire = t.expressionStatement(
@@ -119,7 +119,14 @@ module.exports = function (babel) {
         ]
       )
     );
-    return amdRequire;
+
+    var newPromiseExpression = t.newExpression(t.identifier('Promise'), [
+      t.functionExpression(null,
+        [t.identifier('resolve'), t.identifier('reject')],
+        t.blockStatement([amdRequire])
+      )
+    ]);
+    return newPromiseExpression;
   };
 
   SystemImportExpressionTransformer.prototype.getCommonJSTest = function () {
@@ -186,7 +193,12 @@ module.exports = function (babel) {
       // [module, t.identifier('undefined')] // had to add extra undefined parameter or parenthesis !?!?!?
       [t.parenthesizedExpression(module)]
     );
-    var commonJSRequire = this.createResolveExpressionStatement(commonJSRequireExpression);
+    return commonJSRequireExpression;
+  };
+
+  SystemImportExpressionTransformer.prototype.getCommonJSRequirePromise = function (module) {
+    var commonJSRequireExpression = this.getCommonJSRequire(module);
+    var commonJSRequire = this.createPromiseResolveExpression(commonJSRequireExpression);
     return commonJSRequire;
   };
 
@@ -199,39 +211,40 @@ module.exports = function (babel) {
       module,
       true // computed
     );
-    var globalRequire = this.createResolveExpressionStatement(globalMemberExpression);
+    return globalMemberExpression;
+  };
+
+  SystemImportExpressionTransformer.prototype.getGlobalRequirePromise = function (module) {
+    var globalMemberExpression = this.getGlobalRequire(module);
+    var globalRequire = this.createPromiseResolveExpression(globalMemberExpression);
     return globalRequire;
   };
 
   SystemImportExpressionTransformer.prototype.createTransformedExpression = function () {
-    var moduleImportExpressions;
+    var moduleImportExpression;
     if (this.moduleType === 'amd') {
-      moduleImportExpressions = [this.getAmdRequire(this.moduleNameLiteral)];
+      moduleImportExpression = this.getAmdRequirePromise(this.moduleNameLiteral);
     } else if (this.moduleType === 'common') {
-      moduleImportExpressions = [this.getCommonJSRequire(this.importedModuleLiteral)];
-    } else {
+      moduleImportExpression = this.getCommonJSRequirePromise(this.importedModuleLiteral);
+    } else if (this.moduleType === 'global') {
+      moduleImportExpression = this.getGlobalRequirePromise(this.moduleNameLiteral);
+    } else { // umd
       var amdTest = this.getAmdTest();
       var commonJSTest = this.getCommonJSTest();
       var componentTest = this.getComponentTest();
       var commonJSOrComponentTest = t.logicalExpression('||', commonJSTest, componentTest);
 
-      var umdRequire = t.ifStatement(amdTest,
-        t.blockStatement([this.getAmdRequire(this.moduleNameLiteral)]),
-        t.ifStatement(commonJSOrComponentTest,
-          t.blockStatement([this.getCommonJSRequire(this.importedModuleLiteral)]),
-          t.blockStatement([this.getGlobalRequire(this.moduleNameLiteral)])
+      var umdRequire = t.conditionalExpression(amdTest,
+        this.getAmdRequirePromise(this.moduleNameLiteral),
+        t.conditionalExpression(commonJSOrComponentTest,
+          this.getCommonJSRequirePromise(this.importedModuleLiteral),
+          this.getGlobalRequirePromise(this.moduleNameLiteral)
         )
       );
-      moduleImportExpressions = [umdRequire];
+      moduleImportExpression = umdRequire;
     }
 
-    var newPromiseExpression = t.newExpression(t.identifier('Promise'), [
-      t.functionExpression(null,
-        [t.identifier('resolve'), t.identifier('reject')],
-        t.blockStatement(moduleImportExpressions)
-      )
-    ]);
-    return newPromiseExpression;
+    return moduleImportExpression;
   };
 
   SystemImportExpressionTransformer.prototype.createResolveExpressionStatement = function (parameter) {
@@ -239,6 +252,17 @@ module.exports = function (babel) {
       t.callExpression(
         t.identifier('resolve'), [parameter]
       )
+    );
+    return result;
+  };
+
+  SystemImportExpressionTransformer.prototype.createPromiseResolveExpression = function (parameter) {
+    var result =  t.callExpression(
+      t.memberExpression(
+        t.identifier('Promise'),
+        t.identifier('resolve')
+      ),
+      [parameter]
     );
     return result;
   };
