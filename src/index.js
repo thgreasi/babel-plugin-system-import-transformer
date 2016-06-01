@@ -269,6 +269,23 @@ module.exports = function (babel) {
 
   return {
     visitor: {
+      // AwaitExpression: function (path, state) {
+      //   var awaitParams = path.get('arguments');
+      //   if (awaitParams.length && awaitParams[0].isCallExpression) {
+
+      //   }
+      //   var callee = path.get('callee');
+      //   if (callee && callee.matchesPattern('System.import')) {
+      //     var params = path.get('arguments');
+      //     if (params.length && params[0].isLiteral()) {
+      //       var transformer = new SystemImportExpressionTransformer(state, params);
+      //       var transformedExpression = transformer.createTransformedExpression();
+      //       if (transformedExpression) {
+      //         path.replaceWith(transformedExpression);
+      //       }
+      //     }
+      //   }
+      // },
       CallExpression: function (path, state) {
         var callee = path.get('callee');
         if (callee && callee.matchesPattern('System.import')) {
