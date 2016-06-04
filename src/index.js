@@ -11,13 +11,18 @@ module.exports = function (babel) {
   }
 
   function getImportModuleName(file, importPath) {
-    var importedModulePath = getImportPath(file, importPath);
+    // check if it is a relative path or a module name
+    var importedModulePath = importPath.indexOf('/') === -1 ?
+      importPath :
+      getImportPath(file, importPath);
 
-    // There should be a better way
+    // Use the getModuleName()
+    // so that the getModuleId configuration option is called
+    // There should be a better way than cloning
     var importedModuleFile = t.clone(file);
     importedModuleFile.opts = t.cloneDeep(file.opts);
     importedModuleFile.opts.filename = importedModuleFile.opts.filenameRelative = importedModulePath + '.js';
-    
+
     importedModuleFile.opts.moduleIds = true;
     var result = importedModuleFile.getModuleName();
     return result;
