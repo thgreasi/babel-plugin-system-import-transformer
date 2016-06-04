@@ -1,4 +1,5 @@
 # babel-plugin-system-import-transformer
+[![Build Status](https://travis-ci.org/thgreasi/babel-plugin-system-import-transformer.svg?branch=master)](https://travis-ci.org/thgreasi/babel-plugin-system-import-transformer)
 [![npm](https://img.shields.io/npm/v/babel-plugin-system-import-transformer.svg)](https://www.npmjs.com/package/babel-plugin-system-import-transformer)
 [![npm](https://img.shields.io/npm/dm/babel-plugin-system-import-transformer.svg)](https://www.npmjs.com/package/babel-plugin-system-import-transformer)
 
