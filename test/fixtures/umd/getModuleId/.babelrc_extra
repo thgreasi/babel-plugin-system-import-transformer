@@ -1,0 +1,6 @@
+{
+  "moduleIds": true,
+  "getModuleId": {
+    "npmModule": "npmModuleGlobalVar"
+  }
+}

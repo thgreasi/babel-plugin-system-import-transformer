@@ -1,0 +1,5 @@
+{
+  "plugins": [
+    ["system-import-transformer", { "modules": "common" }]
+  ]
+}

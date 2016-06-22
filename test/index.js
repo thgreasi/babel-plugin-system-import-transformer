@@ -11,48 +11,92 @@ require('babel-register');
 
 var pluginPath = require.resolve('../.');
 
-function runTests() {
-  var testsPath = __dirname + '/fixtures/';
+function traverseFolders(dir) {
+  if (!fs.statSync(dir.path).isDirectory()) {
+    return [];
+  }
 
-  var result = fs.readdirSync(testsPath).map(function(item) {
+  var innerFolders = fs.readdirSync(dir.path).map(function(item) {
     return {
-      path: path.join(testsPath, item),
+      path: path.join(dir.path, item),
       name: item,
+      relativeName: dir.relativeName ?
+                    dir.relativeName + '/' + item :
+                    item
     };
   }).filter(function(item) {
     return fs.statSync(item.path).isDirectory();
-  }).map(runTest).reduce(function (aggr, crnt) {
+  });
+
+  if (!innerFolders.length) {
+    return [dir];
+  } else {
+    return innerFolders.map(traverseFolders).reduce(function (aggr, crnt) {
+      return aggr.concat(crnt);
+    }, []);
+  }
+}
+
+function runTests() {
+  var testsPath = __dirname + '/fixtures/';
+
+  var fixtureFolders = traverseFolders({
+    path: testsPath,
+    name: 'fixtures',
+    relativeName: ''
+  });
+
+  var result = fixtureFolders.map(runTest).reduce(function (aggr, crnt) {
     return aggr + !crnt;
   }, 0);
   return result;
 }
 
-function babelModuleIdProvider(moduleName) {
-  var files = {
-    'myModule': 'myModuleGlobalVar'
-  };
+function createBabelModuleIdProvider(fileMap) {
+  return function babelModuleIdProvider(moduleName) {
+    // var fileMap = {
+    //   'myModule': 'myModuleGlobalVar'
+    // };
 
-  var result = files[moduleName] || moduleName.replace('src/', '');
-  return result;
+    var result = fileMap[moduleName] || moduleName.replace('src/', '');
+    return result;
+  };
+}
+
+function getBabelConfiguration(dir) {
+  var defaultConfiguration = {
+    plugins: [pluginPath]
+  };
+  var configurations = [defaultConfiguration];
+
+  var crntPath = dir.path;
+  for (var i = 0, len = 2; i < len; i++) {
+    var extraConfiguration = {};
+    var babelrcPath = crntPath + '/.babelrc_extra';
+    if (fs.existsSync(babelrcPath)) {
+      extraConfiguration = JSON.parse(fs.readFileSync(babelrcPath, 'utf8'));
+      if (extraConfiguration.getModuleId) {
+        extraConfiguration.getModuleId = createBabelModuleIdProvider(extraConfiguration.getModuleId);
+      }
+      configurations.push(extraConfiguration);
+    }
+
+    crntPath = crntPath + '/..';
+  }
+
+  var configuration = Object.assign.apply(Object, configurations);
+  if (configuration.plugins &&
+    configuration.plugins[0] &&
+    configuration.plugins[0][0] === 'system-import-transformer') {
+    configuration.plugins[0][0] = pluginPath;
+  }
+  return configuration;
 }
 
 function runTest(dir) {
-  var extraConfiguration = {};
-  var babelrcPath = dir.path + '/.babelrc_extra';
-  if (fs.existsSync(babelrcPath)) {
-    extraConfiguration = JSON.parse(fs.readFileSync(babelrcPath, 'utf8'));
-  }
-
-  if (extraConfiguration.getModuleId) {
-    extraConfiguration.getModuleId = babelModuleIdProvider;
-  }
-
-  var configuration = Object.assign({}, {
-    plugins: [pluginPath]
-  }, extraConfiguration);
-
+  var configuration = getBabelConfiguration(dir);
+  // console.log(JSON.stringify(configuration));
   var output = babel.transformFileSync(dir.path + '/actual.js', configuration);
-
   var expected = fs.readFileSync(dir.path + '/expected.js', 'utf-8');
 
   function normalizeLines(str) {
@@ -65,8 +109,8 @@ function runTest(dir) {
     return result;
   }
 
-  process.stdout.write(chalk.bgWhite.black(dir.name));
-  process.stdout.write('\n\n');
+  process.stdout.write(chalk.bgWhite.black(dir.relativeName));
+  process.stdout.write('\n');
 
   var d = diff.diffLines(normalizeLines(output.code), normalizeLines(expected));
   if (!(d.length === 1 && !d[0].added && !d[0].removed)) {
