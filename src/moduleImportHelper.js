@@ -1,6 +1,10 @@
 import { types as t } from './babelArgumentProvider';
 import path from 'path';
 
+function isExternalModuleImport(importPath) {
+  return importPath.indexOf('/') === -1;
+}
+
 function getImportPath(file, relativeImportPath) {
   var filename = file.opts.filename;
   var filePath = filename.replace(/[^\/]+$/, '');
@@ -10,7 +14,7 @@ function getImportPath(file, relativeImportPath) {
 
 export function getImportModuleName(file, importPath) {
   // check if it is a relative path or a module name
-  var importedModulePath = importPath.indexOf('/') === -1 ?
+  var importedModulePath = isExternalModuleImport(importPath) ?
     importPath :
     getImportPath(file, importPath);
 
@@ -21,7 +25,9 @@ export function getImportModuleName(file, importPath) {
   importedModuleFile.opts = t.cloneDeep(file.opts);
   importedModuleFile.opts.filename = importedModuleFile.opts.filenameRelative = importedModulePath + '.js';
 
-  importedModuleFile.opts.moduleIds = true;
-  var result = importedModuleFile.getModuleName();
+  // importedModuleFile.opts.moduleIds = true;
+  var result = importedModuleFile.opts.moduleIds ?
+    importedModuleFile.getModuleName() :
+    importPath;
   return result;
 }
