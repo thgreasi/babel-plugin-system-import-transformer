@@ -1,8 +1,16 @@
 import { types as t } from './babelArgumentProvider';
 import path from 'path';
 
-function isExternalModuleImport(importPath) {
-  return importPath.indexOf('/') === -1;
+function isRelativeImport(importPath) {
+  // https://nodejs.org/api/modules.html#modules_all_together
+  return importPath.startsWith('./') ||
+         importPath.startsWith('/') ||
+         importPath.startsWith('../');
+}
+
+function isNodeModuleImport(importPath) {
+  return importPath.indexOf('/') === -1 ||
+         !isRelativeImport(importPath);
 }
 
 function getImportPath(file, relativeImportPath) {
@@ -14,7 +22,7 @@ function getImportPath(file, relativeImportPath) {
 
 export function getImportModuleName(file, importPath) {
   // check if it is a relative path or a module name
-  var importedModulePath = isExternalModuleImport(importPath) ?
+  var importedModulePath = isNodeModuleImport(importPath) ?
     importPath :
     getImportPath(file, importPath);
 
