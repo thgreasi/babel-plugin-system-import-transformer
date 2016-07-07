@@ -9,3 +9,5 @@ typeof _systemImportTransformerGlobalIdentifier.define === 'function' && _system
     typeof module !== 'undefined' && module.exports && typeof require !== 'undefined' || typeof module !== 'undefined' && module.component && _systemImportTransformerGlobalIdentifier.require && _systemImportTransformerGlobalIdentifier.require.loader === 'component' ?
     Promise.resolve(require(('npmModule'))) :
     Promise.resolve(_systemImportTransformerGlobalIdentifier['npmModuleGlobalVar']);
+
+// System.import('./myModule');
