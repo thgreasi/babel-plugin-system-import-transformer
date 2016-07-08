@@ -20,20 +20,26 @@ function getImportPath(file, relativeImportPath) {
   return result;
 }
 
+
+function getImportedModuleFile(crntFile, importedModulePath) {
+  // There should be a better way than cloning
+  var importedModuleFile = t.clone(crntFile);
+  importedModuleFile.opts = t.cloneDeep(crntFile.opts);
+  importedModuleFile.opts.filename = importedModuleFile.opts.filenameRelative = importedModulePath + '.js';
+
+  // importedModuleFile.opts.moduleIds = true;\
+  return importedModuleFile;
+}
+
 export function getImportModuleName(file, importPath) {
   // check if it is a relative path or a module name
   var importedModulePath = isNodeModuleImport(importPath) ?
     importPath :
     getImportPath(file, importPath);
 
+  var importedModuleFile = getImportedModuleFile(file, importedModulePath);
   // Use the getModuleName()
   // so that the getModuleId configuration option is called
-  // There should be a better way than cloning
-  var importedModuleFile = t.clone(file);
-  importedModuleFile.opts = t.cloneDeep(file.opts);
-  importedModuleFile.opts.filename = importedModuleFile.opts.filenameRelative = importedModulePath + '.js';
-
-  // importedModuleFile.opts.moduleIds = true;
   var result = importedModuleFile.opts.moduleIds ?
     importedModuleFile.getModuleName() :
     importPath;
