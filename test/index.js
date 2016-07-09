@@ -100,11 +100,21 @@ function runTest(dir) {
   var expected = fs.readFileSync(dir.path + '/expected.js', 'utf-8');
 
   function normalizeLines(str) {
+    // normalize line breaks
     var result = str.trimRight().replace(/\r\n/g, '\n')
+      // split ternary operator
       .replace(/[?][^\n]/g, '?\n')
       .replace(/[:][^\n]/g, ':\n');
 
+    // remove comments
+    result = result.replace(/(\/\/.*?)[\r\n]/g, '');
+    result = result.replace(/(\/\/.*?)$/g, '');
+
+    // format the code
     result = beautify(result, { indent_size: 4 });
+
+    // remove extra line breaks
+    result = result.replace(/\n+/g, '\n');
 
     return result;
   }
