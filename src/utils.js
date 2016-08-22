@@ -1,15 +1,5 @@
 import { types as t } from './babelArgumentProvider';
-
-export function getGlobalObjectExpression(t) {
-  return t.conditionalExpression(
-    t.binaryExpression('!==',
-      t.unaryExpression('typeof', t.identifier('window')),
-      t.stringLiteral('undefined')
-    ),
-    t.identifier('window'),
-    t.identifier('self')
-  );
-}
+import { getGlobalObjectExpression } from './globalObjectHelper';
 
 export class UtilsHelper {
   constructor (file) {
@@ -19,7 +9,7 @@ export class UtilsHelper {
   getGlobalIdentifier () {
     var name = 'system-import-transformer-global-identifier';
     var result = this.getOrCreateHelper(name, function() {
-      return getGlobalObjectExpression(t);
+      return getGlobalObjectExpression();
     });
     return result;
   }
