@@ -11,26 +11,6 @@ export function getGlobalObjectExpression(t) {
   );
 }
 
-export function createResolveExpressionStatement (t, parameter) {
-  var result = t.expressionStatement(
-    t.callExpression(
-      t.identifier('resolve'), [parameter]
-    )
-  );
-  return result;
-}
-
-export function createPromiseResolveExpression (t, parameter) {
-  var result =  t.callExpression(
-    t.memberExpression(
-      t.identifier('Promise'),
-      t.identifier('resolve')
-    ),
-    [parameter]
-  );
-  return result;
-}
-
 export class UtilsHelper {
   constructor (file) {
     this.file = file;
