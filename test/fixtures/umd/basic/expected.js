@@ -1,6 +1,9 @@
 'use strict';
 
-var _systemImportTransformerGlobalIdentifier = typeof window !== 'undefined' ? window : self;
+var _systemImportTransformerGlobalIdentifier = typeof window !== 'undefined' ? window :
+    typeof self !== 'undefined' ? self :
+    typeof global !== 'undefined' ? global :
+    {};
 
 typeof _systemImportTransformerGlobalIdentifier.define === 'function' && _systemImportTransformerGlobalIdentifier.define.amd ?
     new Promise(function (resolve, reject) {
