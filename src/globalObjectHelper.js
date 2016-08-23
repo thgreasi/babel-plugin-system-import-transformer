@@ -7,6 +7,20 @@ export function getGlobalObjectExpression() {
       t.stringLiteral('undefined')
     ),
     t.identifier('window'),
-    t.identifier('self')
+    t.conditionalExpression(
+      t.binaryExpression('!==',
+        t.unaryExpression('typeof', t.identifier('self')),
+        t.stringLiteral('undefined')
+      ),
+      t.identifier('self'),
+      t.conditionalExpression(
+        t.binaryExpression('!==',
+          t.unaryExpression('typeof', t.identifier('global')),
+          t.stringLiteral('undefined')
+        ),
+        t.identifier('global'),
+        t.objectExpression([])
+      )
+    )
   );
 }
