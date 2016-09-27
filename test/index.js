@@ -46,7 +46,9 @@ function runTests() {
     relativeName: ''
   });
 
-  var result = fixtureFolders.map(runTest).reduce(function (aggr, crnt) {
+  var result = fixtureFolders.filter(function (dir) {
+    return dir.name[0] !== '_';
+  }).map(runTest).reduce(function (aggr, crnt) {
     return aggr + !crnt;
   }, 0);
   return result;
