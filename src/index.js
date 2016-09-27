@@ -8,7 +8,7 @@ export default function (babel) {
         var callee = path.get('callee');
         if (callee && callee.matchesPattern('System.import')) {
           var params = path.get('arguments');
-          if (params.length && params[0].isLiteral()) {
+          if (params.length) {
             setBabelArgument(babel);
             var transformer = new SystemImportExpressionTransformer(state, params);
             var transformedExpression = transformer.createTransformedExpression();

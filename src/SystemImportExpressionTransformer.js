@@ -10,10 +10,14 @@ export default class SystemImportExpressionTransformer {
     this.pluginOptions = this.state.opts;
     this.moduleType = this.pluginOptions.modules;
     var param = params[0];
-    this.importedModuleLiteral = t.stringLiteral(param.node.value);
 
-    var moduleName = getImportModuleName(this.file, this.importedModuleLiteral.value);
-    this.moduleNameLiteral = t.stringLiteral(moduleName);
+    this.importedModuleExpression = param.node;
+    this.moduleNameExpression = this.importedModuleExpression;
+
+    if (this.importedModuleExpression.type === 'StringLiteral') {
+      var moduleName = getImportModuleName(this.file, this.importedModuleExpression.value);
+      this.moduleNameExpression = t.stringLiteral(moduleName); // for AMD and Global when configured
+    }
   }
 
   getGlobalIdentifier () {
@@ -166,11 +170,11 @@ export default class SystemImportExpressionTransformer {
   createTransformedExpression () {
     var moduleImportExpression;
     if (this.moduleType === 'amd') {
-      moduleImportExpression = this.getAmdRequirePromise(this.moduleNameLiteral);
+      moduleImportExpression = this.getAmdRequirePromise(this.moduleNameExpression);
     } else if (this.moduleType === 'common') {
-      moduleImportExpression = this.getCommonJSRequirePromise(this.importedModuleLiteral);
+      moduleImportExpression = this.getCommonJSRequirePromise(this.importedModuleExpression);
     } else if (this.moduleType === 'global') {
-      moduleImportExpression = this.getGlobalRequirePromise(this.moduleNameLiteral);
+      moduleImportExpression = this.getGlobalRequirePromise(this.moduleNameExpression);
     } else { // umd
       var amdTest = this.getAmdTest();
       var commonJSTest = this.getCommonJSTest();
@@ -178,10 +182,10 @@ export default class SystemImportExpressionTransformer {
       var commonJSOrComponentTest = t.logicalExpression('||', commonJSTest, componentTest);
 
       var umdRequire = t.conditionalExpression(amdTest,
-        this.getAmdRequirePromise(this.moduleNameLiteral),
+        this.getAmdRequirePromise(this.moduleNameExpression),
         t.conditionalExpression(commonJSOrComponentTest,
-          this.getCommonJSRequirePromise(this.importedModuleLiteral),
-          this.getGlobalRequirePromise(this.moduleNameLiteral)
+          this.getCommonJSRequirePromise(this.importedModuleExpression),
+          this.getGlobalRequirePromise(this.moduleNameExpression)
         )
       );
       moduleImportExpression = umdRequire;
