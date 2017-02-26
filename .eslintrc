@@ -16,10 +16,10 @@
     "no-console": 0
   },
   "globals": {
-    "localforage": true,
     "Promise": true,
     "console": true,
     "self": true,
-    "System": true
+    "System": true,
+    "import": true
   }
 }

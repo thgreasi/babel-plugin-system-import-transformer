@@ -22,11 +22,11 @@
     "globals": {
       "console": true,
       "define": true,
-      "localforage": true,
       "module": true,
       "Promise": true,
       "require": true,
       "self": true,
-      "System": true
+      "System": true,
+      "import": true
     }
 }

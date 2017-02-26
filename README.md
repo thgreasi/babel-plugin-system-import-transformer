@@ -3,11 +3,17 @@
 [![npm](https://img.shields.io/npm/v/babel-plugin-system-import-transformer.svg)](https://www.npmjs.com/package/babel-plugin-system-import-transformer)
 [![npm](https://img.shields.io/npm/dm/babel-plugin-system-import-transformer.svg)](https://www.npmjs.com/package/babel-plugin-system-import-transformer)
 
-[Babel](https://babeljs.io/) plugin that replaces System.import with the equivalent UMD pattern
+[Babel](https://babeljs.io/) plugin that replaces import() & System.import() with the equivalent UMD pattern
 
 ## Transforms
 
 ```js
+import('./utils/serializer').then(function(module){
+    console.log(module);
+});
+
+// AND
+
 System.import('./utils/serializer').then(function(module){
     console.log(module);
 });
@@ -32,9 +38,11 @@ new Promise(function (resolve, reject) {
 
 ## Requirements
 
-- Babel v6.x.x
+- Babel v6.14.x
 
-**Note:** for babel v5 please use the [v1.x.x releases](https://github.com/thgreasi/babel-plugin-system-import-transformer/tree/v1.x.x-stable).
+**Notes:**
+- for babel < v6.14 please use the [v2.x.x releases](https://github.com/thgreasi/babel-plugin-system-import-transformer/tree/v2.x.x-stable).
+- for babel v5 please use the [v1.x.x releases](https://github.com/thgreasi/babel-plugin-system-import-transformer/tree/v1.x.x-stable).
 
 ## Installation
 
@@ -80,36 +88,56 @@ babel: {
 }
 ```
 
-### AMD & CommonJS
+## Options
 
-When you are transforming to `AMD` or `CommonJS` modules you should set the respective plugin option:
+### modules
+Type: String  
+Values: [**`UMD`**/`amd`/`common`]  
+[Example](test/fixtures/common/.babelrc_extra)
+
+Specifies the target compilation module system. When set configured to an option other than `UMD` then `system-import-transformer` will omit the module type detection code and just insert the appropriate require statement wrapped with a `Promise`.
+
 ```js
-// AMD
+// targeting AMD
 {
     "plugins": [
         ["system-import-transformer", { "modules": "amd" }]
     ]
 }
 
-// CommonJS
+// will emit an AMD specific code like:
+new Promise(function (resolve, reject) {
+    var global = window;
+    global.require(['utilsSerializer'], resolve, reject);
+}).then(function(module){ console.log(module); });
+```
+
+```js
+// targeting CommonJS
 {
     "plugins": [
         ["system-import-transformer", { "modules": "common" }]
     ]
 }
-```
-`system-import-transformer` will omit the module type detection code and just insert the appropriate require statement wrapped with a `Promise`.
-```js
-// AMD
-new Promise(function (resolve, reject) {
-    var global = window;
-    global.require(['utilsSerializer'], resolve, reject);
-}).then(function(module){ console.log(module); });
 
-// CommonJS
+// will emit a CommonJS specific code like:
 new Promise(function (resolve, reject) {
     resolve(require('./utils/serializer'));
 }).then(function(module){ console.log(module); });
 ```
 
-**Note**: the default transpilation target is UMD
+### syntax
+
+#### syntax.import
+Type: Boolean  
+Values: [**`true`**/`false`]  
+[Example](test/fixtures/umd-no-import/.babelrc_extra)
+
+When set to `false`, babel will not transpile `import()` statements.
+
+#### syntax["system-import"]
+Type: Boolean  
+Values: [**`true`**/`false`]  
+[Example](test/fixtures/umd-no-system-import/.babelrc_extra)
+
+When set to `false`, babel will not transpile `System.import()` statements.

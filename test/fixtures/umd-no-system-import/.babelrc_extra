@@ -1,0 +1,5 @@
+{
+  "plugins": [
+    ["system-import-transformer", { "syntax": { "system-import": false } }]
+  ]
+}
