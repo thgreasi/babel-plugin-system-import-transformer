@@ -22,3 +22,11 @@ typeof _systemImportTransformerGlobalIdentifier.define === 'function' && _system
     typeof module !== 'undefined' && module.exports && typeof require !== 'undefined' || typeof module !== 'undefined' && module.component && _systemImportTransformerGlobalIdentifier.require && _systemImportTransformerGlobalIdentifier.require.loader === 'component' ?
     Promise.resolve(require(('./myModule/' + x + '/file'))) :
     Promise.resolve(_systemImportTransformerGlobalIdentifier['./myModule/' + x + '/file']);
+
+typeof _systemImportTransformerGlobalIdentifier.define === 'function' && _systemImportTransformerGlobalIdentifier.define.amd ?
+    new Promise(function (resolve, reject) {
+        _systemImportTransformerGlobalIdentifier.require(['./myModule/' + x + '/file'], resolve, reject);
+    }) :
+    typeof module !== 'undefined' && module.exports && typeof require !== 'undefined' || typeof module !== 'undefined' && module.component && _systemImportTransformerGlobalIdentifier.require && _systemImportTransformerGlobalIdentifier.require.loader === 'component' ?
+    Promise.resolve(require(('./myModule/' + x + '/file'))) :
+    Promise.resolve(_systemImportTransformerGlobalIdentifier['./myModule/' + x + '/file']);
