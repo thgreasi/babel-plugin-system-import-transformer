@@ -1,0 +1,4 @@
+{
+  "plugins": [
+    ["system-import-transformer", { "commonJS": { "useRequireEnsure": true } } ] ]
+}
