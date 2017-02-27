@@ -144,9 +144,55 @@ export default class SystemImportExpressionTransformer {
   }
 
   getCommonJSRequirePromise (module) {
+    if (this.pluginOptions.commonJS && this.pluginOptions.commonJS.useRequireEnsure) {
+      return this.getCommonJSRequireEnsurePromise(module);
+    }
+    return this.getCommonJSPlainRequirePromise(module);
+  }
+
+  getCommonJSPlainRequirePromise (module) {
     var commonJSRequireExpression = this.getCommonJSRequire(module);
     var commonJSRequire = createPromiseResolveExpression(commonJSRequireExpression);
     return commonJSRequire;
+  }
+
+  getCommonJSRequireEnsurePromise (module) {
+    // require.ensure([], function(require) { resolve(require(module)); });
+    var requireEnsure = t.expressionStatement(
+      t.callExpression(
+        t.memberExpression(
+          t.identifier('require'),
+          t.identifier('ensure')
+        ),
+        [
+          t.arrayExpression([]),
+          t.functionExpression(null,
+            [t.identifier('require')],
+            t.blockStatement([
+              t.expressionStatement(
+                t.callExpression(
+                  t.identifier('resolve'),
+                  [
+                    t.callExpression(
+                      t.identifier('require'),
+                      [module]
+                    )
+                  ]
+                )
+              )
+            ])
+          )
+        ]
+      )
+    );
+
+    var newPromiseExpression = t.newExpression(t.identifier('Promise'), [
+      t.functionExpression(null,
+        [t.identifier('resolve')],
+        t.blockStatement([requireEnsure])
+      )
+    ]);
+    return newPromiseExpression;
   }
 
   getGlobalRequire (module) {
