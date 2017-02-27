@@ -90,6 +90,31 @@ babel: {
 
 ## Options
 
+### commonJS
+
+CommonJS specific options.
+
+#### commonJS.useRequireEnsure
+Type: Boolean  
+Values: [**`false`**/`true`]  
+
+When set to `true`, all CommonJS import statements will use Webpack's `require.ensure()` syntax. This enables dynamic module loading in CommonJS (Webpack) and works both for the `UMD` and (of course) `CommonJS` module target types.
+
+```js
+{
+    "plugins": [
+        ["system-import-transformer", { "commonJS": { "useRequireEnsure": true } }]
+    ]
+}
+
+// the CommonJS code part will look like:
+new Promise(function (resolve) {
+    require.ensure([], function (require) {
+        resolve(require('./utils/serializer'));
+    });
+}).then(function(module){ console.log(module); });
+```
+
 ### modules
 Type: String  
 Values: [**`UMD`**/`amd`/`common`]  
@@ -127,6 +152,8 @@ new Promise(function (resolve, reject) {
 ```
 
 ### syntax
+
+Syntax specific options.
 
 #### syntax.import
 Type: Boolean  
