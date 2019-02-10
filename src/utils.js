@@ -7,21 +7,21 @@ export class UtilsHelper {
   }
 
   getGlobalIdentifier () {
-    var name = 'system-import-transformer-global-identifier';
-    var result = this.getOrCreateHelper(name, function() {
+    const name = 'system-import-transformer-global-identifier';
+    const result = this.getOrCreateHelper(name, function() {
       return getGlobalObjectExpression();
     });
     return result;
   }
 
   getOrCreateHelper (name, ref) {
-    var declar = this.file.declarations[name];
+    const declar = this.file.declarations[name];
     if (declar) {
       return declar;
     }
 
-    var uid = this.file.declarations[name] = this.file.scope.generateUidIdentifier(name);
-    this.file.usedHelpers[name] = true;
+    const uid = this.file.declarations[name] = this.file.scope.generateUidIdentifier(name);
+    this.file.hub.addHelper(name)
 
     if (typeof ref === 'function') {
       ref = ref();

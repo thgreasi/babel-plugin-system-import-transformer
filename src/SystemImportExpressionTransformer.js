@@ -9,13 +9,13 @@ export default class SystemImportExpressionTransformer {
     this.file = state.file;
     this.pluginOptions = this.state.opts;
     this.moduleType = this.pluginOptions.modules;
-    var param = params[0];
+    const param = params[0];
 
     this.importedModuleExpression = param.node;
     this.moduleNameExpression = this.importedModuleExpression;
 
     if (this.importedModuleExpression.type === 'StringLiteral') {
-      var moduleName = getImportModuleName(this.file, this.importedModuleExpression.value);
+      const moduleName = getImportModuleName(this.file, this.importedModuleExpression.value);
       this.moduleNameExpression = t.stringLiteral(moduleName); // for AMD and Global when configured
     }
   }
@@ -29,9 +29,9 @@ export default class SystemImportExpressionTransformer {
   }
 
   getAmdTest () {
-    var globalIdentifier = this.getGlobalIdentifier();
+    const globalIdentifier = this.getGlobalIdentifier();
     // typeof global.define === 'function' && global.define.amd
-    var amdTest = t.logicalExpression('&&',
+    const amdTest = t.logicalExpression('&&',
       t.binaryExpression('===',
         t.unaryExpression('typeof', t.memberExpression(
           globalIdentifier,
@@ -51,9 +51,9 @@ export default class SystemImportExpressionTransformer {
   }
 
   getAmdRequirePromise (module) {
-    var globalIdentifier = this.getGlobalIdentifier();
+    const globalIdentifier = this.getGlobalIdentifier();
     // global.require(['localforageSerializer'], resolve, reject);
-    var amdRequire = t.expressionStatement(
+    const amdRequire = t.expressionStatement(
       t.callExpression(
         t.memberExpression(
           globalIdentifier,
@@ -67,7 +67,7 @@ export default class SystemImportExpressionTransformer {
       )
     );
 
-    var newPromiseExpression = t.newExpression(t.identifier('Promise'), [
+    const newPromiseExpression = t.newExpression(t.identifier('Promise'), [
       t.functionExpression(null,
         [t.identifier('resolve'), t.identifier('reject')],
         t.blockStatement([amdRequire])
@@ -78,7 +78,7 @@ export default class SystemImportExpressionTransformer {
 
   getCommonJSTest () {
     // typeof module !== 'undefined' && module.exports && typeof require !== 'undefined'
-    var commonJSTest = t.logicalExpression('&&',
+    const commonJSTest = t.logicalExpression('&&',
       t.binaryExpression('!==',
         t.unaryExpression('typeof', t.identifier('module')),
         t.stringLiteral('undefined')
@@ -98,9 +98,9 @@ export default class SystemImportExpressionTransformer {
   }
 
   getComponentTest () {
-    var globalIdentifier = this.getGlobalIdentifier();
+    const globalIdentifier = this.getGlobalIdentifier();
     // typeof module !== 'undefined' && module.component && global.require && global.require.loader === 'component'
-    var componentTest = t.logicalExpression('&&',
+    const componentTest = t.logicalExpression('&&',
       t.binaryExpression('!==',
         t.unaryExpression('typeof', t.identifier('module')),
         t.stringLiteral('undefined')
@@ -134,7 +134,7 @@ export default class SystemImportExpressionTransformer {
   getCommonJSRequire (module) {
     // resolve(require('./../utils/serializer'));
     
-    var commonJSRequireExpression = t.callExpression(
+    const commonJSRequireExpression = t.callExpression(
       t.identifier('require'),
       // [module] // why this isn't working???
       // [module, t.identifier('undefined')] // had to add extra undefined parameter or parenthesis !?!?!?
@@ -151,14 +151,14 @@ export default class SystemImportExpressionTransformer {
   }
 
   getCommonJSPlainRequirePromise (module) {
-    var commonJSRequireExpression = this.getCommonJSRequire(module);
-    var commonJSRequire = createPromiseResolveExpression(commonJSRequireExpression);
+    const commonJSRequireExpression = this.getCommonJSRequire(module);
+    const commonJSRequire = createPromiseResolveExpression(commonJSRequireExpression);
     return commonJSRequire;
   }
 
   getCommonJSRequireEnsurePromise (module) {
     // require.ensure([], function(require) { resolve(require(module)); });
-    var requireEnsure = t.expressionStatement(
+    const requireEnsure = t.expressionStatement(
       t.callExpression(
         t.memberExpression(
           t.identifier('require'),
@@ -186,7 +186,7 @@ export default class SystemImportExpressionTransformer {
       )
     );
 
-    var newPromiseExpression = t.newExpression(t.identifier('Promise'), [
+    const newPromiseExpression = t.newExpression(t.identifier('Promise'), [
       t.functionExpression(null,
         [t.identifier('resolve')],
         t.blockStatement([requireEnsure])
@@ -196,10 +196,10 @@ export default class SystemImportExpressionTransformer {
   }
 
   getGlobalRequire (module) {
-    var globalIdentifier = this.getGlobalIdentifier();
+    const globalIdentifier = this.getGlobalIdentifier();
 
     // resolve(global.localforageSerializer);
-    var globalMemberExpression = t.memberExpression(
+    const globalMemberExpression = t.memberExpression(
       globalIdentifier,
       module,
       true // computed
@@ -208,13 +208,13 @@ export default class SystemImportExpressionTransformer {
   }
 
   getGlobalRequirePromise (module) {
-    var globalMemberExpression = this.getGlobalRequire(module);
-    var globalRequire = createPromiseResolveExpression(globalMemberExpression);
+    const globalMemberExpression = this.getGlobalRequire(module);
+    const globalRequire = createPromiseResolveExpression(globalMemberExpression);
     return globalRequire;
   }
 
   createTransformedExpression () {
-    var moduleImportExpression;
+    let moduleImportExpression;
     if (this.moduleType === 'amd') {
       moduleImportExpression = this.getAmdRequirePromise(this.moduleNameExpression);
     } else if (this.moduleType === 'common') {
@@ -222,12 +222,12 @@ export default class SystemImportExpressionTransformer {
     } else if (this.moduleType === 'global') {
       moduleImportExpression = this.getGlobalRequirePromise(this.moduleNameExpression);
     } else { // umd
-      var amdTest = this.getAmdTest();
-      var commonJSTest = this.getCommonJSTest();
-      var componentTest = this.getComponentTest();
-      var commonJSOrComponentTest = t.logicalExpression('||', commonJSTest, componentTest);
+      const amdTest = this.getAmdTest();
+      const commonJSTest = this.getCommonJSTest();
+      const componentTest = this.getComponentTest();
+      const commonJSOrComponentTest = t.logicalExpression('||', commonJSTest, componentTest);
 
-      var umdRequire = t.conditionalExpression(amdTest,
+      const umdRequire = t.conditionalExpression(amdTest,
         this.getAmdRequirePromise(this.moduleNameExpression),
         t.conditionalExpression(commonJSOrComponentTest,
           this.getCommonJSRequirePromise(this.importedModuleExpression),

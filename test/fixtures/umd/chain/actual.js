@@ -1,3 +1,1 @@
-System.import('npmModule').then(function(npmModule) {
-
-});
+System.import('npmModule').then(function(npmModule) {});

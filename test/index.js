@@ -1,84 +1,89 @@
-var assert = require('assert');
-var babel = require('babel-core');
-var chalk = require('chalk');
-var clear = require('clear');
-var diff = require('diff');
-var fs = require('fs');
-var path = require('path');
-var beautify = require('js-beautify').js_beautify;
+const babel = require('@babel/core');
+const chalk = require('chalk');
+const clear = require('clear');
+const diff = require('diff');
+const fs = require('fs');
+const path = require('path');
+const prettier = require('prettier');
 
-require('babel-register');
+require('@babel/register');
 
-var pluginPath = require.resolve('../.');
+const pluginPath = require.resolve('../.');
 
 function traverseFolders(dir) {
   if (!fs.statSync(dir.path).isDirectory()) {
     return [];
   }
 
-  var innerFolders = fs.readdirSync(dir.path).map(function(item) {
-    return {
-      path: path.join(dir.path, item),
-      name: item,
-      relativeName: dir.relativeName ?
-                    dir.relativeName + '/' + item :
-                    item
-    };
-  }).filter(function(item) {
-    return fs.statSync(item.path).isDirectory();
-  });
+  const innerFolders = fs
+    .readdirSync(dir.path)
+    .map(function(item) {
+      return {
+        path: path.join(dir.path, item),
+        name: item,
+        relativeName: dir.relativeName ? dir.relativeName + '/' + item : item,
+      };
+    })
+    .filter(function(item) {
+      return fs.statSync(item.path).isDirectory();
+    });
 
   if (!innerFolders.length) {
     return [dir];
   } else {
-    return innerFolders.map(traverseFolders).reduce(function (aggr, crnt) {
+    return innerFolders.map(traverseFolders).reduce(function(aggr, crnt) {
       return aggr.concat(crnt);
     }, []);
   }
 }
 
 function runTests() {
-  var testsPath = __dirname + '/fixtures/';
+  const testsPath = __dirname + '/fixtures/';
 
-  var fixtureFolders = traverseFolders({
+  const fixtureFolders = traverseFolders({
     path: testsPath,
     name: 'fixtures',
-    relativeName: ''
+    relativeName: '',
   });
 
-  var result = fixtureFolders.filter(function (dir) {
-    return dir.name[0] !== '_';
-  }).map(runTest).reduce(function (aggr, crnt) {
-    return aggr + !crnt;
-  }, 0);
+  const result = fixtureFolders
+    .filter(function(dir) {
+      return dir.name[0] !== '_';
+    })
+    .map(runTest)
+    .reduce(function(aggr, crnt) {
+      return aggr + !crnt;
+    }, 0);
   return result;
 }
 
 function createBabelModuleIdProvider(fileMap) {
   return function babelModuleIdProvider(moduleName) {
-    // var fileMap = {
-    //   'myModule': 'myModuleGlobalVar'
+    // const fileMap = {
+    //   'myModule': 'myModuleGlobalconst'
     // };
 
-    var result = fileMap[moduleName] || moduleName.replace('src/', '');
+    const result = fileMap[moduleName] || moduleName.replace('src/', '');
     return result;
   };
 }
 
 function getBabelConfiguration(dir) {
-  var defaultConfiguration = {
-    plugins: [pluginPath]
+  const defaultConfiguration = {
+    plugins: [pluginPath],
   };
-  var configurations = [defaultConfiguration];
+  const configurations = [defaultConfiguration];
 
-  var crntPath = dir.path;
-  for (var i = 0, len = 2; i < len; i++) {
-    var extraConfiguration = {};
-    var babelrcPath = crntPath + '/.babelrc_extra';
+  let crntPath = dir.path;
+  for (let i = 0, len = 2; i < len; i++) {
+    let extraConfiguration = {};
+    const babelrcPath = crntPath + '/.babelrc_extra';
     if (fs.existsSync(babelrcPath)) {
       extraConfiguration = JSON.parse(fs.readFileSync(babelrcPath, 'utf8'));
       if (extraConfiguration.getModuleId) {
-        extraConfiguration.getModuleId = createBabelModuleIdProvider(extraConfiguration.getModuleId);
+        extraConfiguration.getModuleId = createBabelModuleIdProvider(
+          extraConfiguration.getModuleId,
+        );
       }
       configurations.push(extraConfiguration);
     }
@@ -86,54 +91,53 @@ function getBabelConfiguration(dir) {
     crntPath = crntPath + '/..';
   }
 
-  var configuration = Object.assign.apply(Object, configurations);
-  if (configuration.plugins &&
+  const configuration = Object.assign.apply(Object, configurations);
+  if (
+    configuration.plugins &&
     configuration.plugins[0] &&
-    configuration.plugins[0][0] === 'system-import-transformer') {
+    configuration.plugins[0][0] === 'system-import-transformer'
+  ) {
     configuration.plugins[0][0] = pluginPath;
   }
   return configuration;
 }
 
-function runTest(dir) {
-  var configuration = getBabelConfiguration(dir);
-  // console.log(JSON.stringify(configuration));
-  var output = babel.transformFileSync(dir.path + '/actual.js', configuration);
-  var expected = fs.readFileSync(dir.path + '/expected.js', 'utf-8');
+const prettierConfigPath = path.join(__dirname, '../.prettierrc');
+const prettierConfig = JSON.parse(fs.readFileSync(prettierConfigPath, 'utf-8'));
 
-  function normalizeLines(str) {
-    // normalize line breaks
-    var result = str.trimRight().replace(/\r\n/g, '\n')
-      // split ternary operator
-      .replace(/[?][^\n]/g, '?\n')
-      .replace(/[:][^\n]/g, ':\n');
-
+function formatCode(str) {
+  // normalize line breaks
+  let result = str.trimRight()
+    .replace(/\r\n/g, '\n')
     // remove comments
-    result = result.replace(/(\/\/.*?)[\r\n]/g, '');
-    result = result.replace(/(\/\/.*?)$/g, '');
-
-    // format the code
-    result = beautify(result, { indent_size: 4 });
-
+    .replace(/(\/\/.*?)[\r\n]/g, '')
+    .replace(/(\/\/.*?)$/g, '');
+  
+  // format the code
+  result = prettier.format(result, prettierConfig)
     // remove extra line breaks
-    result = result.replace(/\n+/g, '\n');
+    .replace(/\n+/g, '\n');
 
-    return result;
-  }
+  return result;
+}
+
+function runTest(dir) {
+  const configuration = getBabelConfiguration(dir);
+  const output = babel.transformFileSync(dir.path + '/actual.js', configuration);
+  const expected = fs.readFileSync(dir.path + '/expected.js', 'utf-8');
 
   process.stdout.write(chalk.bgWhite.black(dir.relativeName));
   process.stdout.write('\n');
 
-  var d = diff.diffLines(normalizeLines(output.code), normalizeLines(expected));
+  const d = diff.diffLines(formatCode(output.code), formatCode(expected));
   if (!(d.length === 1 && !d[0].added && !d[0].removed)) {
-    d.forEach(function (part) {
-      var value = part.value;
+    d.forEach(function(part) {
+      let value = part.value;
       if (part.added) {
         value = chalk.green(part.value);
       } else if (part.removed) {
         value = chalk.red(part.value);
       }
-
 
       process.stdout.write(value);
     });
@@ -144,7 +148,7 @@ function runTest(dir) {
 }
 
 if (process.argv.indexOf('--watch') >= 0) {
-  require('watch').watchTree(__dirname + '/..', function () {
+  require('watch').watchTree(__dirname + '/..', function() {
     delete require.cache[pluginPath];
     clear();
     console.log('Press Ctrl+C to stop watching...');
@@ -156,7 +160,7 @@ if (process.argv.indexOf('--watch') >= 0) {
     }
   });
 } else {
-  var failedTests = runTests();
+  const failedTests = runTests();
   if (failedTests) {
     throw new Error(failedTests + ' tests Failed');
   }
