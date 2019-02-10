@@ -38,10 +38,11 @@ new Promise(function (resolve, reject) {
 
 ## Requirements
 
-- Babel v6.14.x
+- Babel v7.x.x
 
 **Notes:**
-- for babel < v6.14 please use the [v2.x.x releases](https://github.com/thgreasi/babel-plugin-system-import-transformer/tree/v2.x.x-stable).
+- for babel ^6.14.0 please use the [v3.x.x releases](https://github.com/thgreasi/babel-plugin-system-import-transformer/tree/v3.x.x-stable).
+- for babel <6.14 please use the [v2.x.x releases](https://github.com/thgreasi/babel-plugin-system-import-transformer/tree/v2.x.x-stable).
 - for babel v5 please use the [v1.x.x releases](https://github.com/thgreasi/babel-plugin-system-import-transformer/tree/v1.x.x-stable).
 
 ## Installation
