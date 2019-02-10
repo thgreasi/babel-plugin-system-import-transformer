@@ -1,3 +1,3 @@
 'use strict';
 
-Promise.resolve(require(('npmModule')));
+Promise.resolve(require('npmModule'));

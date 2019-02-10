@@ -2,45 +2,47 @@ import { types as t } from './babelArgumentProvider';
 import { getGlobalObjectExpression } from './globalObjectHelper';
 
 export class UtilsHelper {
-  constructor (file) {
+  constructor(file) {
     this.file = file;
   }
 
-  getGlobalIdentifier () {
-    var name = 'system-import-transformer-global-identifier';
-    var result = this.getOrCreateHelper(name, function() {
+  getGlobalIdentifier() {
+    const name = 'system-import-transformer-global-identifier';
+    const result = this.getOrCreateHelper(name, function() {
       return getGlobalObjectExpression();
     });
     return result;
   }
 
-  getOrCreateHelper (name, ref) {
-    var declar = this.file.declarations[name];
+  getOrCreateHelper(name, ref) {
+    const declar = this.file.declarations[name];
     if (declar) {
       return declar;
     }
 
-    var uid = this.file.declarations[name] = this.file.scope.generateUidIdentifier(name);
-    this.file.usedHelpers[name] = true;
+    const uid = (this.file.declarations[
+      name
+    ] = this.file.scope.generateUidIdentifier(name));
+    this.file.hub.addHelper(name);
 
     if (typeof ref === 'function') {
       ref = ref();
     }
 
     if (t.isFunctionExpression(ref) && !ref.id) {
-        ref.body._compact = true;
-        ref._generated = true;
-        ref.id = uid;
-        ref.type = "FunctionDeclaration";
-        this.file.attachAuxiliaryComment(ref);
-        this.file.path.unshiftContainer("body", ref);
+      ref.body._compact = true;
+      ref._generated = true;
+      ref.id = uid;
+      ref.type = 'FunctionDeclaration';
+      this.file.attachAuxiliaryComment(ref);
+      this.file.path.unshiftContainer('body', ref);
     } else {
-        ref._compact = true;
-        this.file.scope.push({
-            id: uid,
-            init: ref,
-            unique: true
-        });
+      ref._compact = true;
+      this.file.scope.push({
+        id: uid,
+        init: ref,
+        unique: true,
+      });
     }
 
     return uid;

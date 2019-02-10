@@ -1,7 +1,7 @@
 var x = 'test';
 
-System.import('npmModule' + x);
+System.import('npmModule'.concat(x));
 
-System.import('./myModule/' + x + '/file');
+System.import('./myModule/'.concat(x, '/file'));
 
 System.import(`./myModule/${x}/file`);
