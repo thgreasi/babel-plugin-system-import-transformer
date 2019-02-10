@@ -107,14 +107,16 @@ const prettierConfig = JSON.parse(fs.readFileSync(prettierConfigPath, 'utf-8'));
 
 function formatCode(str) {
   // normalize line breaks
-  let result = str.trimRight()
+  let result = str
+    .trimRight()
     .replace(/\r\n/g, '\n')
     // remove comments
     .replace(/(\/\/.*?)[\r\n]/g, '')
     .replace(/(\/\/.*?)$/g, '');
-  
+
   // format the code
-  result = prettier.format(result, prettierConfig)
+  result = prettier
+    .format(result, prettierConfig)
     // remove extra line breaks
     .replace(/\n+/g, '\n');
 
@@ -123,7 +125,10 @@ function formatCode(str) {
 
 function runTest(dir) {
   const configuration = getBabelConfiguration(dir);
-  const output = babel.transformFileSync(dir.path + '/actual.js', configuration);
+  const output = babel.transformFileSync(
+    dir.path + '/actual.js',
+    configuration,
+  );
   const expected = fs.readFileSync(dir.path + '/expected.js', 'utf-8');
 
   process.stdout.write(chalk.bgWhite.black(dir.relativeName));
