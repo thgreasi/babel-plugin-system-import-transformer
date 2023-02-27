@@ -1,0 +1,21 @@
+{
+  "moduleIds": true,
+  "getModuleId": {
+    "npmModule": "npmModuleGlobalVar",
+    "PATH/actual": "actualGlobalVar"
+  },
+  "plugins": [
+    ["system-import-transformer", {
+      "modules": "amd"
+    }]
+  ],
+  "presets": [
+    [
+        "@babel/preset-env",
+      {
+            "modules": "amd",
+            "useBuiltIns": false
+      }
+    ]
+  ]
+}
