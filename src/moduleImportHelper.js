@@ -26,7 +26,8 @@ function getImportedModuleFile(crntFile, importedModulePath) {
     ...crntFile,
     opts: {
       ...crntFile.opts,
-      filename: (crntFile.opts.filenameRelative = importedModulePath + '.js'),
+      filename: importedModulePath + '.js',
+      filenameRelative: importedModulePath + '.js',
     },
     getModuleName: crntFile.getModuleName,
   };

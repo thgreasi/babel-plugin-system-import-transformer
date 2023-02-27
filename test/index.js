@@ -57,14 +57,22 @@ function runTests() {
   return result;
 }
 
-function createBabelModuleIdProvider(fileMap) {
+function createBabelModuleIdProvider(fileMap, crntPath) {
   return function babelModuleIdProvider(moduleName) {
     // const fileMap = {
     //   'myModule': 'myModuleGlobalconst'
     // };
 
-    const result = fileMap[moduleName] || moduleName.replace('src/', '');
-    return result;
+    if (fileMap[moduleName]) {
+      return fileMap[moduleName];
+    }
+
+    const pathMap = moduleName.replace(crntPath, 'PATH');
+    if (fileMap[pathMap]) {
+      return fileMap[pathMap];
+    }
+
+    return moduleName.replace('src/', '');
   };
 }
 
@@ -83,6 +91,7 @@ function getBabelConfiguration(dir) {
       if (extraConfiguration.getModuleId) {
         extraConfiguration.getModuleId = createBabelModuleIdProvider(
           extraConfiguration.getModuleId,
+          crntPath,
         );
       }
       configurations.push(extraConfiguration);
